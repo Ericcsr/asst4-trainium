@@ -69,7 +69,7 @@ def vector_add_tiled(a_vec, b_vec):
     M = a_vec.shape[0]
     
     # TODO: You should modify this variable for Step 1
-    ROW_CHUNK = 1
+    ROW_CHUNK = 128
 
     # Loop over the total number of chunks, we can use affine_range
     # because there are no loop-carried dependencies
@@ -104,13 +104,13 @@ def vector_add_stream(a_vec, b_vec):
     M = a_vec.shape[0]
 
     # TODO: You should modify this variable for Step 1
-    FREE_DIM = 2
+    FREE_DIM = 1000
 
     # The maximum size of our Partition Dimension
     PARTITION_DIM = 128
 
     # The total size of each tile
-    TILE_M = PARTITION_DIM * FREE_DIM
+    TILE_M = PARTITION_DIM * FREE_DIM # first dim 256 
 
     # Reshape the the input vectors
     a_vec_re = a_vec.reshape((M // TILE_M, PARTITION_DIM, FREE_DIM))
@@ -126,7 +126,7 @@ def vector_add_stream(a_vec, b_vec):
         a_tile = nl.ndarray((PARTITION_DIM, FREE_DIM), dtype=a_vec.dtype, buffer=nl.sbuf)
         b_tile = nl.ndarray((PARTITION_DIM, FREE_DIM), dtype=a_vec.dtype, buffer=nl.sbuf)
 
-        # Load the input tiles
+        # Load the input tiles into SBUF
         a_tile = nl.load(a_vec_re[m])
         b_tile = nl.load(b_vec_re[m])
 
@@ -165,7 +165,6 @@ def vector_add_direct_allocation(a_vec, b_vec):
 
     # Get the total number of tiles
     N_TILES = M // TILE_M
-
     # Initialize the starting byte offset for a_tensor
     current_offset = 0
     
