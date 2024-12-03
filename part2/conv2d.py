@@ -126,7 +126,6 @@ def fused_conv2d_maxpool(X, W, bias, pool_size=1):
                 i_2 = nl.arange(out_pool_width)[None, None, :, None, None]
                 i_3 = nl.arange(pool_size)[None, None, None, :, None]
                 i_4 = nl.arange(pool_size)[None, None, None, None, :]
-                #conv_result = nl.copy(conv_result, dtype=X_out.dtype)
                 out_tile = nl.max(conv_result[i_0, (i_1 * pool_size + i_3) * out_width + i_2 * pool_size + i_4], axis=[3, 4])
                 out_tile += broadcasted_bias
                 nl.store(X_out[b, n * c_out_per_tile:(n + 1) * c_out_per_tile, m * n_vert_pools:(m + 1) * n_vert_pools, :], value=out_tile)
