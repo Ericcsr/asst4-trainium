@@ -107,8 +107,6 @@ def fused_conv2d_maxpool(X, W, bias, pool_size=1):
                             X_tile = nl.ndarray((c_in_per_tile, tile_height * out_width), dtype=X.dtype, buffer=nl.sbuf)
                             for h in nl.affine_range(tile_height):
                                 X_tile[:, h*out_width:(h+1)*out_width] = nl.load(X[b, k * c_in_per_tile:(k + 1) * c_in_per_tile, m * tile_height + h + i, j:j+out_width])
-                                
-                            #res_psum += nisa.nc_matmul(Wt_tile[...], X_tile[...],is_transpose=True) # directly write to psum
                             res_psum += nl.matmul(Wt_tile[...], X_tile[...], transpose_x=False)
                         conv_result[...] = nl.loop_reduce(res_psum, op=np.add, loop_indices=[i,j], dtype=X_out.dtype) # directly transfer sbuf
 
@@ -119,17 +117,6 @@ def fused_conv2d_maxpool(X, W, bias, pool_size=1):
                 i_4 = nl.arange(pool_size)[None, None, None, None, :]
                 # Should try to load as a 3D tensor first
                 out_tile = nisa.tensor_reduce(np.max,conv_result[i_0, (i_1 * pool_size + i_3) * out_width + i_2 * pool_size + i_4], axis=[3, 4])
-                out_tile += broadcasted_bias
-                out_tile_ = nl.copy(out_tile, dtype=X_out.dtype)
-                #breakpoint()
-                nl.store(X_out[b, n * c_out_per_tile:(n + 1) * c_out_per_tile, m * n_vert_pools:(m + 1) * n_vert_pools, :], value=out_tile_)
-                #breakpoint()
-                # without maxpooling direct indexing
-                # i_0 = nl.arange(c_out_per_tile)[:, None, None]
-                # i_1 = nl.arange(n_vert_pools)[None, :, None]
-                # i_2 = nl.arange(out_pool_width)[None, None, :]
-                # out_tile = conv_result[i_0, i_1 * out_pool_width + i_2]
-                # out_tile += broadcasted_bias
-                # nl.store(X_out[b, n * c_out_per_tile:(n + 1) * c_out_per_tile, m * n_vert_pools:(m + 1) * n_vert_pools, :], value=out_tile)
-
+                out_tile = nl.add(out_tile, broadcasted_bias)
+                nl.store(X_out[b, n * c_out_per_tile:(n + 1) * c_out_per_tile, m * n_vert_pools:(m + 1) * n_vert_pools, :], value=out_tile)
     return X_out

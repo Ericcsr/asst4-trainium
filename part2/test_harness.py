@@ -177,54 +177,54 @@ if __name__ == "__main__":
     if args.simulate:
         conv2d = simulate_kernel_wrapper(conv2d)
     # running correctness tests
-    # print(
-    #     "Running correctness test for conv2d kernel with smaller images...",
-    #     end="",
-    #     flush=True,
-    # )
-    # test_result = test_correctness_conv2d_kernel(conv2d, use_larger_images=False)
-    # if test_result:
-    #     print("Passed 😎")
-    # else:
-    #     print("Failed 😢")
+    print(
+        "Running correctness test for conv2d kernel with smaller images...",
+        end="",
+        flush=True,
+    )
+    test_result = test_correctness_conv2d_kernel(conv2d, use_larger_images=False)
+    if test_result:
+        print("Passed 😎")
+    else:
+        print("Failed 😢")
 
     print(
         "Running correctness test for conv2d kernel with larger images...",
         end="",
         flush=True,
     )
-    test_result = test_correctness_conv2d_kernel(conv2d, use_larger_images=True, use_maxpool=True)
+    test_result = test_correctness_conv2d_kernel(conv2d, use_larger_images=True)
     if test_result:
         print("Passed 😇")
     else:
         print("Failed 😢")
 
-    # print(
-    #     "Running correctness test for conv2d kernel with larger images + bias...",
-    #     end="",
-    #     flush=True,
-    # )
-    # test_result = test_correctness_conv2d_kernel(
-    #     conv2d, use_bias=True, use_larger_images=True
-    # )
-    # if test_result:
-    #     print("Passed 😍")
-    # else:
-    #     print("Failed 😢")
+    print(
+        "Running correctness test for conv2d kernel with larger images + bias...",
+        end="",
+        flush=True,
+    )
+    test_result = test_correctness_conv2d_kernel(
+        conv2d, use_bias=True, use_larger_images=True
+    )
+    if test_result:
+        print("Passed 😍")
+    else:
+        print("Failed 😢")
 
-    # if args.test_maxpool:
-    #     print(
-    #         "Running correctness test for conv2d kernel with larger images + bias + maxpool...",
-    #         end="",
-    #         flush=True,
-    #     )
-    #     test_result = test_correctness_conv2d_kernel(
-    #         conv2d, use_bias=True, use_maxpool=True, use_larger_images=True
-    #     )
-    #     if test_result:
-    #         print("Passed 😍")
-    #     else:
-    #         print("Failed 😢")
+    if args.test_maxpool:
+        print(
+            "Running correctness test for conv2d kernel with larger images + bias + maxpool...",
+            end="",
+            flush=True,
+        )
+        test_result = test_correctness_conv2d_kernel(
+            conv2d, use_bias=True, use_maxpool=True, use_larger_images=True
+        )
+        if test_result:
+            print("Passed 😍")
+        else:
+            print("Failed 😢")
 
     # if args.simulate:
     #     exit()
