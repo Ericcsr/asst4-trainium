@@ -84,7 +84,6 @@ def fused_conv2d_maxpool(X, W, bias, pool_size=1):
     for b in nl.affine_range(batch_size):
         # TODO: Perform the convolution of X[b] with the weights W and bias b, followed by a maxpool
         # and store the result in X_out[b]
-        # convolution first 
         W_cache = nl.ndarray((n_tiles_c_out, nl.par_dim(c_out_per_tile), in_channels, filter_height, filter_width), dtype=W.dtype, buffer=nl.sbuf)
         for tile_id in nl.affine_range(n_tiles_c_out):
             for in_id in nl.affine_range(in_channels):
@@ -94,7 +93,7 @@ def fused_conv2d_maxpool(X, W, bias, pool_size=1):
             bias_tile[...] = nl.load(bias[n * c_out_per_tile:(n + 1) * c_out_per_tile])
             broadcasted_bias = bias_tile.broadcast_to((c_out_per_tile, n_vert_pools, out_pool_width))
             for m in nl.affine_range(n_tiles_hw):
-                conv_result = nl.zeros((c_out_per_tile, tile_height * out_width), dtype=X_out.dtype, buffer=nl.sbuf)
+                conv_result = nl.zeros((nl.par_dim(c_out_per_tile), tile_height * out_width), dtype=X_out.dtype, buffer=nl.sbuf)
                 for i in nl.affine_range(filter_height):
                     for j in nl.affine_range(filter_width):
                         # partial sum in psum  
@@ -104,36 +103,33 @@ def fused_conv2d_maxpool(X, W, bias, pool_size=1):
                             #for l in nl.affine_range(c_out_per_tile):
                             Wt_tile[...] = nl.copy(W_cache[n, :, k * c_in_per_tile:(k + 1) * c_in_per_tile, i, j], dtype=W.dtype)
 
+                            # Should make X_tile preloaded as well
                             X_tile = nl.ndarray((c_in_per_tile, tile_height * out_width), dtype=X.dtype, buffer=nl.sbuf)
                             for h in nl.affine_range(tile_height):
                                 X_tile[:, h*out_width:(h+1)*out_width] = nl.load(X[b, k * c_in_per_tile:(k + 1) * c_in_per_tile, m * tile_height + h + i, j:j+out_width])
                                 
                             #res_psum += nisa.nc_matmul(Wt_tile[...], X_tile[...],is_transpose=True) # directly write to psum
                             res_psum += nl.matmul(Wt_tile[...], X_tile[...], transpose_x=False)
-                            del Wt_tile, X_tile
                         conv_result[...] = nl.loop_reduce(res_psum, op=np.add, loop_indices=[i,j], dtype=X_out.dtype) # directly transfer sbuf
 
-                # i_0 = nl.arange(c_out_per_tile)[:, None, None, None, None]
-                # i_1 = nl.arange(n_vert_pools)[None, :, None, None, None]
-                # i_2 = nl.arange(out_pool_width)[None, None, :, None, None]
-                # i_3 = nl.arange(pool_size)[None, None, None, :, None]
-                # i_4 = nl.arange(pool_size)[None, None, None, None, :]
-                # result_ = nl.zeros((nl.par_dim(c_out_per_tile), n_vert_pools, out_pool_width, pool_size, pool_size), dtype=X_out.dtype, buffer=nl.sbuf)
-                # for i_0 in nl.affine_range(c_out_per_tile):
-                #     for i_1 in nl.affine_range(n_vert_pools):
-                #         for i_2 in nl.affine_range(out_pool_width):
-                #             for i_3 in nl.affine_range(pool_size):
-                #                 for i_4 in nl.affine_range(pool_size):
-                #                     result_[i_0,i_1,i_2,i_3,i_4] += conv_result[i_0, (i_1 * pool_size + i_3) * out_width + i_2 * pool_size + i_4] / (pool_size * pool_size)
-                # out_tile = nl.max(result_, axis=[3, 4])
+                i_0 = nl.arange(c_out_per_tile)[:, None, None, None, None]
+                i_1 = nl.arange(n_vert_pools)[None, :, None, None, None]
+                i_2 = nl.arange(out_pool_width)[None, None, :, None, None]
+                i_3 = nl.arange(pool_size)[None, None, None, :, None]
+                i_4 = nl.arange(pool_size)[None, None, None, None, :]
+                # Should try to load as a 3D tensor first
+                out_tile = nisa.tensor_reduce(np.max,conv_result[i_0, (i_1 * pool_size + i_3) * out_width + i_2 * pool_size + i_4], axis=[3, 4])
+                out_tile += broadcasted_bias
+                out_tile_ = nl.copy(out_tile, dtype=X_out.dtype)
+                #breakpoint()
+                nl.store(X_out[b, n * c_out_per_tile:(n + 1) * c_out_per_tile, m * n_vert_pools:(m + 1) * n_vert_pools, :], value=out_tile_)
+                #breakpoint()
+                # without maxpooling direct indexing
+                # i_0 = nl.arange(c_out_per_tile)[:, None, None]
+                # i_1 = nl.arange(n_vert_pools)[None, :, None]
+                # i_2 = nl.arange(out_pool_width)[None, None, :]
+                # out_tile = conv_result[i_0, i_1 * out_pool_width + i_2]
                 # out_tile += broadcasted_bias
                 # nl.store(X_out[b, n * c_out_per_tile:(n + 1) * c_out_per_tile, m * n_vert_pools:(m + 1) * n_vert_pools, :], value=out_tile)
-                # without maxpooling direct indexing
-                i_0 = nl.arange(c_out_per_tile)[:, None, None]
-                i_1 = nl.arange(n_vert_pools)[None, :, None]
-                i_2 = nl.arange(out_pool_width)[None, None, :]
-                out_tile = conv_result[i_0, i_1 * out_pool_width + i_2]
-                out_tile += broadcasted_bias
-                nl.store(X_out[b, n * c_out_per_tile:(n + 1) * c_out_per_tile, m * n_vert_pools:(m + 1) * n_vert_pools, :], value=out_tile)
 
     return X_out
