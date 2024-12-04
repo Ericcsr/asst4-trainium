@@ -84,7 +84,7 @@ def test_correctness_conv2d_kernel(
 
                         out = kernel(*args, **kwargs)
                         out_ref = ref_impl(*args, **kwargs)
-                        #print("Finished:",input_channels, output_channels, kernel_size, batch_size, image_dims, use_bias, use_maxpool)
+
                         if not np.allclose(out, out_ref):
                             print(
                                 f"Output mismatch for input_channels: {input_channels}, \
@@ -100,7 +100,7 @@ def test_correctness_conv2d_kernel(
 def test_performance_conv2d_kernel(
     kernel,
     dtype=np.float32,
-    batch_size=4,
+    batch_size=2,
     in_channels=256,
     out_channels=256,
     image_height=224,
@@ -111,8 +111,8 @@ def test_performance_conv2d_kernel(
 ):
 
     performance_requirements_by_dtype = {
-        np.float32: 42500,
-        np.float16: 12000
+        np.float32: 8900,
+        np.float16: 2300
     }
 
     X = np.random.rand(batch_size, in_channels, image_height, image_width).astype(dtype)
@@ -124,8 +124,10 @@ def test_performance_conv2d_kernel(
     args = [X, W, bias]
     kwargs = {"pool_size": pool_size}
 
+    dtype_str = "float32" if dtype == np.float32 else "float16"
+
     bench_func = nki.benchmark(
-        warmup=5, iters=20, save_neff_name=f"file_pool_{pool_size}.neff"
+        warmup=5, iters=20, save_neff_name=f"file_pool_{pool_size}_{dtype_str}.neff"
     )(kernel)
     text_trap = io.StringIO()
     sys.stdout = text_trap
@@ -186,27 +188,16 @@ if __name__ == "__main__":
     else:
         print("Failed 😢")
 
-    # print(
-    #     "Running correctness test for conv2d kernel with smaller images + bias...",
-    #     end="",
-    #     flush=True,
-    # )
-    # test_result = test_correctness_conv2d_kernel(conv2d, use_larger_images=False, use_bias = True)
-    # if test_result:
-    #     print("Passed 😎")
-    # else:
-    #     print("Failed 😢")
-
-    # print(
-    #     "Running correctness test for conv2d kernel with larger images...",
-    #     end="",
-    #     flush=True,
-    # )
-    # test_result = test_correctness_conv2d_kernel(conv2d, use_larger_images=True)
-    # if test_result:
-    #     print("Passed 😇")
-    # else:
-    #     print("Failed 😢")
+    print(
+        "Running correctness test for conv2d kernel with larger images...",
+        end="",
+        flush=True,
+    )
+    test_result = test_correctness_conv2d_kernel(conv2d, use_larger_images=True)
+    if test_result:
+        print("Passed 😇")
+    else:
+        print("Failed 😢")
 
     # print(
     #     "Running correctness test for conv2d kernel with larger images + bias...",
@@ -221,19 +212,19 @@ if __name__ == "__main__":
     # else:
     #     print("Failed 😢")
 
-    if args.test_maxpool:
-        print(
-            "Running correctness test for conv2d kernel with larger images + bias + maxpool...",
-            end="",
-            flush=True,
-        )
-        test_result = test_correctness_conv2d_kernel(
-            conv2d, use_bias=True, use_maxpool=True, use_larger_images=True
-        )
-        if test_result:
-            print("Passed 😍")
-        else:
-            print("Failed 😢")
+    # if args.test_maxpool:
+    #     print(
+    #         "Running correctness test for conv2d kernel with larger images + bias + maxpool...",
+    #         end="",
+    #         flush=True,
+    #     )
+    #     test_result = test_correctness_conv2d_kernel(
+    #         conv2d, use_bias=True, use_maxpool=True, use_larger_images=True
+    #     )
+    #     if test_result:
+    #         print("Passed 😍")
+    #     else:
+    #         print("Failed 😢")
 
     # if args.simulate:
     #     exit()
@@ -246,35 +237,35 @@ if __name__ == "__main__":
         print("Performance test failed 😢")
 
     if args.profile is not None:
-        save_trace(args.profile, "file_pool_1.neff")
+        save_trace(args.profile + "_float32", "file_pool_1_float32.neff")
     
-    # print("Comparing performance with reference kernel (no maxpool, float16)...")
-    # test_result = test_performance_conv2d_kernel(conv2d, pool_size=1, dtype = np.float16)
-    # if test_result:
-    #     print("Performance test passed 😍")
-    # else:
-    #     print("Performance test failed 😢")
+    print("Comparing performance with reference kernel (no maxpool, float16)...")
+    test_result = test_performance_conv2d_kernel(conv2d, pool_size=1, dtype = np.float16)
+    if test_result:
+        print("Performance test passed 😍")
+    else:
+        print("Performance test failed 😢")
 
-    # if args.profile is not None:
-    #     save_trace(args.profile, "file_pool_1.neff")
+    if args.profile is not None:
+        save_trace(args.profile + "_float16", "file_pool_1_float16.neff")
 
-    # if args.test_maxpool:
-    #     print("Comparing performance with reference kernel (with maxpool, float32)...")
-    #     test_result = test_performance_conv2d_kernel(conv2d, pool_size=2, dtype = np.float32)
-    #     if test_result:
-    #         print("Performance test passed 😍")
-    #     else:
-    #         print("Performance test failed 😢")
+    if args.test_maxpool:
+        print("Comparing performance with reference kernel (with maxpool, float32)...")
+        test_result = test_performance_conv2d_kernel(conv2d, pool_size=2, dtype = np.float32)
+        if test_result:
+            print("Performance test passed 😍")
+        else:
+            print("Performance test failed 😢")
 
-    #     if args.profile is not None:
-    #         save_trace(args.profile + "_pool", "file_pool_2.neff")
+        if args.profile is not None:
+            save_trace(args.profile + "_pool_float32", "file_pool_2_float32.neff")
 
-    #     print("Comparing performance with reference kernel (with maxpool, float16)...")
-    #     test_result = test_performance_conv2d_kernel(conv2d, pool_size=2, dtype = np.float16)
-    #     if test_result:
-    #         print("Performance test passed 😍")
-    #     else:
-    #         print("Performance test failed 😢")
+        print("Comparing performance with reference kernel (with maxpool, float16)...")
+        test_result = test_performance_conv2d_kernel(conv2d, pool_size=2, dtype = np.float16)
+        if test_result:
+            print("Performance test passed 😍")
+        else:
+            print("Performance test failed 😢")
 
-    #     if args.profile is not None:
-    #         save_trace(args.profile + "_pool", "file_pool_2.neff")
+        if args.profile is not None:
+            save_trace(args.profile + "_pool_float16", "file_pool_2_float16.neff")

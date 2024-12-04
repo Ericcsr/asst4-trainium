@@ -57,21 +57,6 @@ def fused_conv2d_maxpool(X, W, bias, pool_size=1):
     # Can assume one PSUM bank can at least fit one row of the pixels
     assert nl.tile_size.gemm_moving_fmax >= out_width
 
-    # load X and W and bias to memory
-    X_ = nl.ndarray(
-        shape=(batch_size, nl.par_dim(in_channels), input_height, input_width),
-        dtype=X.dtype,
-        buffer=nl.hbm,
-    )
-    X_[...] = nl.load(X, dtype=X.dtype)
-
-    # W_ = nl.ndarray(
-    #     shape = (out_channels, nl.par_dim(in_channels), filter_height, filter_width),
-    #     dtype=X.dtype,
-    #     buffer=nl.hbm
-    # )
-    # for i in nl.affine_range(out_channels):
-    #     W_[i] = nl.load(W[i], dtype=X.dtype)
     # Initialize output array
     X_out = nl.ndarray(
         shape=(batch_size, out_channels, out_pool_height, out_pool_width),
@@ -95,10 +80,15 @@ def fused_conv2d_maxpool(X, W, bias, pool_size=1):
 
     # Process the images in batches
     # out of memory during compilation...?
+    # TODO: Should swap order of loops to avoid
     for b in nl.affine_range(batch_size):
         # TODO: Perform the convolution of X[b] with the weights W and bias b, followed by a maxpool
         # and store the result in X_out[b]
         # convolution first 
+        W_cache = nl.ndarray((n_tiles_c_out, nl.par_dim(c_out_per_tile), in_channels, filter_height, filter_width), dtype=W.dtype, buffer=nl.sbuf)
+        for tile_id in nl.affine_range(n_tiles_c_out):
+            for in_id in nl.affine_range(in_channels):
+                W_cache[tile_id, :,in_id,:,:] = nl.load(W[tile_id*c_out_per_tile:(tile_id+1)*c_out_per_tile,in_id,:,:])
         for n in nl.affine_range(n_tiles_c_out):
             bias_tile = nl.ndarray((c_out_per_tile,1,1), dtype=bias.dtype, buffer=nl.sbuf)
             bias_tile[...] = nl.load(bias[n * c_out_per_tile:(n + 1) * c_out_per_tile])
@@ -110,23 +100,40 @@ def fused_conv2d_maxpool(X, W, bias, pool_size=1):
                         # partial sum in psum  
                         res_psum = nl.zeros((c_out_per_tile, tile_height * out_width), nl.float32, buffer=nl.psum)
                         for k in nl.affine_range(n_tiles_c_in):
-                            Wt_tile = nl.ndarray((c_in_per_tile, c_out_per_tile), dtype=W.dtype, buffer=nl.sbuf)
-                            for l in nl.affine_range(c_out_per_tile):
-                                Wt_tile[:, l] = nl.load(W[n * c_out_per_tile + l, k * c_in_per_tile:(k + 1) * c_in_per_tile, i, j])
+                            Wt_tile = nl.ndarray((c_out_per_tile, c_in_per_tile), dtype=W.dtype, buffer=nl.sbuf)
+                            #for l in nl.affine_range(c_out_per_tile):
+                            Wt_tile[...] = nl.copy(W_cache[n, :, k * c_in_per_tile:(k + 1) * c_in_per_tile, i, j], dtype=W.dtype)
 
                             X_tile = nl.ndarray((c_in_per_tile, tile_height * out_width), dtype=X.dtype, buffer=nl.sbuf)
                             for h in nl.affine_range(tile_height):
-                                X_tile[:, h*out_width:(h+1)*out_width] = nl.load(X_[b, k * c_in_per_tile:(k + 1) * c_in_per_tile, m * tile_height + h + i, j:j+out_width])
+                                X_tile[:, h*out_width:(h+1)*out_width] = nl.load(X[b, k * c_in_per_tile:(k + 1) * c_in_per_tile, m * tile_height + h + i, j:j+out_width])
                                 
-                            res_psum += nisa.nc_matmul(Wt_tile[...], X_tile[...]) # directly write to psum
+                            #res_psum += nisa.nc_matmul(Wt_tile[...], X_tile[...],is_transpose=True) # directly write to psum
+                            res_psum += nl.matmul(Wt_tile[...], X_tile[...], transpose_x=False)
+                            del Wt_tile, X_tile
                         conv_result[...] = nl.loop_reduce(res_psum, op=np.add, loop_indices=[i,j], dtype=X_out.dtype) # directly transfer sbuf
 
-                i_0 = nl.arange(c_out_per_tile)[:, None, None, None, None]
-                i_1 = nl.arange(n_vert_pools)[None, :, None, None, None]
-                i_2 = nl.arange(out_pool_width)[None, None, :, None, None]
-                i_3 = nl.arange(pool_size)[None, None, None, :, None]
-                i_4 = nl.arange(pool_size)[None, None, None, None, :]
-                out_tile = nl.max(conv_result[i_0, (i_1 * pool_size + i_3) * out_width + i_2 * pool_size + i_4], axis=[3, 4])
+                # i_0 = nl.arange(c_out_per_tile)[:, None, None, None, None]
+                # i_1 = nl.arange(n_vert_pools)[None, :, None, None, None]
+                # i_2 = nl.arange(out_pool_width)[None, None, :, None, None]
+                # i_3 = nl.arange(pool_size)[None, None, None, :, None]
+                # i_4 = nl.arange(pool_size)[None, None, None, None, :]
+                # result_ = nl.zeros((nl.par_dim(c_out_per_tile), n_vert_pools, out_pool_width, pool_size, pool_size), dtype=X_out.dtype, buffer=nl.sbuf)
+                # for i_0 in nl.affine_range(c_out_per_tile):
+                #     for i_1 in nl.affine_range(n_vert_pools):
+                #         for i_2 in nl.affine_range(out_pool_width):
+                #             for i_3 in nl.affine_range(pool_size):
+                #                 for i_4 in nl.affine_range(pool_size):
+                #                     result_[i_0,i_1,i_2,i_3,i_4] += conv_result[i_0, (i_1 * pool_size + i_3) * out_width + i_2 * pool_size + i_4] / (pool_size * pool_size)
+                # out_tile = nl.max(result_, axis=[3, 4])
+                # out_tile += broadcasted_bias
+                # nl.store(X_out[b, n * c_out_per_tile:(n + 1) * c_out_per_tile, m * n_vert_pools:(m + 1) * n_vert_pools, :], value=out_tile)
+                # without maxpooling direct indexing
+                i_0 = nl.arange(c_out_per_tile)[:, None, None]
+                i_1 = nl.arange(n_vert_pools)[None, :, None]
+                i_2 = nl.arange(out_pool_width)[None, None, :]
+                out_tile = conv_result[i_0, i_1 * out_pool_width + i_2]
                 out_tile += broadcasted_bias
                 nl.store(X_out[b, n * c_out_per_tile:(n + 1) * c_out_per_tile, m * n_vert_pools:(m + 1) * n_vert_pools, :], value=out_tile)
+
     return X_out

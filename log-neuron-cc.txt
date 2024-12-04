@@ -1,0 +1,58 @@
+2024-12-04T01:01:23Z INFO 10192 [root]: /home/ubuntu/aws_neuron_venv_pytorch_p310/bin/neuronx-cc compile --framework XLA penguin.py --internal-tensorizer-opt-level=nki --pipeline compile SaveTemps --target trn1 --disable-internal-io-dge --output=file.neff
+2024-12-04T01:01:23Z INFO 10200 [root]: XLA detected
+2024-12-04T01:01:23Z INFO 10200 [root]: Pipeline: Frontend WalrusDriver BIRLinker Kelper SaveTemps
+2024-12-04T01:01:24Z INFO 10200 [root]: Intermediate files stored in /home/ubuntu/asst4-trainium, output in /home/ubuntu/asst4-trainium
+2024-12-04T01:01:24Z INFO 10200 [pipeline.Pipeline.0]: Job Pipeline len(in_states) 1
+2024-12-04T01:01:24Z INFO 10200 [pipeline.Pipeline.0]: Processing input #0
+2024-12-04T01:01:24Z INFO 10200 [pipeline.Pipeline.0]: Replay this job by calling: /home/ubuntu/aws_neuron_venv_pytorch_p310/bin/neuronx-cc compile --framework XLA --state '{"model": ["penguin.py"], "state_dir": "/home/ubuntu/asst4-trainium", "state_id": "root"}' --pipeline Pipeline
+2024-12-04T01:01:24Z INFO 10200 [pipeline.Pipeline.0]: Running pipeline Pipeline.0
+2024-12-04T01:01:24Z INFO 10200 [pipeline.Pipeline.0]: Starting job job.Frontend.0
+2024-12-04T01:01:24Z INFO 10200 [job.Frontend.0]: Job Frontend len(in_states) 1
+2024-12-04T01:01:24Z INFO 10200 [job.Frontend.0]: Processing input #0
+2024-12-04T01:01:24Z INFO 10200 [job.Frontend.0]: Replay this job by calling: /home/ubuntu/aws_neuron_venv_pytorch_p310/bin/neuronx-cc compile --framework XLA --state '{"model": ["penguin.py"], "state_dir": "/home/ubuntu/asst4-trainium", "state_id": "root"}' --pipeline Frontend
+2024-12-04T01:01:24Z INFO 10200 [job.Frontend.0]: Start model loading
+2024-12-04T01:01:24Z INFO 10200 [job.Frontend.0]: Start tensorization
+2024-12-04T01:01:24Z WARNING 10200 [job.Frontend.0]: TVM not detected.
+2024-12-04T01:01:24Z INFO 10200 [job.Frontend.0]: Num jobs: 1
+2024-12-04T01:01:24Z USER 10200 [root/Tensorizer/Tensorizer]: Running Tensorizer
+2024-12-04T01:01:24Z INFO 10200 [Tensorizer]: Frontend did not find netlist info. Switching to flat flow.
+2024-12-04T01:01:24Z USER 10200 [root/Tensorizer/Tensorizer]: Tensorizer finished after 0.000 seconds
+2024-12-04T01:01:24Z ERROR 10200 [neuronxcc.driver.CommandDriver]: ***************************************************************
+2024-12-04T01:01:24Z ERROR 10200 [neuronxcc.driver.CommandDriver]:  An Internal Compiler Error has occurred
+2024-12-04T01:01:24Z ERROR 10200 [neuronxcc.driver.CommandDriver]: ***************************************************************
+2024-12-04T01:01:24Z ERROR 10200 [neuronxcc.driver.CommandDriver]: 
+2024-12-04T01:01:24Z USER 10200 [neuronxcc.driver.CommandDriver]: Flat flow tensorizer artifact not found
+2024-12-04T01:01:24Z ERROR 10200 [neuronxcc.driver.CommandDriver]: 
+2024-12-04T01:01:24Z ERROR 10200 [neuronxcc.driver.CommandDriver]: Internal details:
+2024-12-04T01:01:24Z ERROR 10200 [neuronxcc.driver.CommandDriver]: Type: <class 'AssertionError'>
+2024-12-04T01:01:24Z ERROR 10200 [neuronxcc.driver.CommandDriver]:   File "neuronxcc/driver/CommandDriver.py", line 345, in neuronxcc.driver.CommandDriver.CommandDriver.run_subcommand
+2024-12-04T01:01:24Z ERROR 10200 [neuronxcc.driver.CommandDriver]:   File "neuronxcc/driver/commands/CompileCommand.py", line 1350, in neuronxcc.driver.commands.CompileCommand.CompileCommand.run
+2024-12-04T01:01:24Z ERROR 10200 [neuronxcc.driver.CommandDriver]:   File "neuronxcc/driver/commands/CompileCommand.py", line 1301, in neuronxcc.driver.commands.CompileCommand.CompileCommand.runPipeline
+2024-12-04T01:01:24Z ERROR 10200 [neuronxcc.driver.CommandDriver]:   File "neuronxcc/driver/commands/CompileCommand.py", line 1321, in neuronxcc.driver.commands.CompileCommand.CompileCommand.runPipeline
+2024-12-04T01:01:24Z ERROR 10200 [neuronxcc.driver.CommandDriver]:   File "neuronxcc/driver/commands/CompileCommand.py", line 1324, in neuronxcc.driver.commands.CompileCommand.CompileCommand.runPipeline
+2024-12-04T01:01:24Z ERROR 10200 [neuronxcc.driver.CommandDriver]:   File "neuronxcc/driver/Job.py", line 344, in neuronxcc.driver.Job.SingleInputJob.run
+2024-12-04T01:01:24Z ERROR 10200 [neuronxcc.driver.CommandDriver]:   File "neuronxcc/driver/Job.py", line 370, in neuronxcc.driver.Job.SingleInputJob.runOnState
+2024-12-04T01:01:24Z ERROR 10200 [neuronxcc.driver.CommandDriver]:   File "neuronxcc/driver/Pipeline.py", line 30, in neuronxcc.driver.Pipeline.Pipeline.runSingleInput
+2024-12-04T01:01:24Z ERROR 10200 [neuronxcc.driver.CommandDriver]:   File "neuronxcc/driver/Job.py", line 344, in neuronxcc.driver.Job.SingleInputJob.run
+2024-12-04T01:01:24Z ERROR 10200 [neuronxcc.driver.CommandDriver]:   File "neuronxcc/driver/Job.py", line 370, in neuronxcc.driver.Job.SingleInputJob.runOnState
+2024-12-04T01:01:24Z ERROR 10200 [neuronxcc.driver.CommandDriver]:   File "neuronxcc/driver/jobs/Frontend.py", line 451, in neuronxcc.driver.jobs.Frontend.Frontend.runSingleInput
+2024-12-04T01:01:24Z ERROR 10200 [neuronxcc.driver.CommandDriver]:   File "neuronxcc/driver/jobs/Frontend.py", line 234, in neuronxcc.driver.jobs.Frontend.Frontend.runXLAFrontend
+2024-12-04T01:01:24Z ERROR 10200 [neuronxcc.driver.CommandDriver]:   File "neuronxcc/driver/jobs/Frontend.py", line 237, in neuronxcc.driver.jobs.Frontend.Frontend.runXLAFrontend
+2024-12-04T01:01:24Z ERROR 10200 [neuronxcc.driver.CommandDriver]:   File "neuronxcc/starfish/penguin/Penguin.py", line 378, in neuronxcc.starfish.penguin.Penguin.runPenguin
+2024-12-04T01:01:24Z ERROR 10200 [neuronxcc.driver.CommandDriver]:   File "neuronxcc/starfish/penguin/Frontend.py", line 161, in neuronxcc.starfish.penguin.Frontend.tensorizeXla
+2024-12-04T01:01:24Z ERROR 10200 [neuronxcc.driver.CommandDriver]:   File "neuronxcc/starfish/penguin/Frontend.py", line 163, in neuronxcc.starfish.penguin.Frontend.tensorizeXla
+2024-12-04T01:01:24Z ERROR 10200 [neuronxcc.driver.CommandDriver]:   File "neuronxcc/starfish/penguin/Frontend.py", line 168, in neuronxcc.starfish.penguin.Frontend.tensorizeXla
+2024-12-04T01:01:24Z USER 10200 [neuronxcc.driver.CommandDriver]: 
+2024-12-04T01:01:24Z USER 10200 [neuronxcc.driver.CommandDriver]: Diagnostic information:
+2024-12-04T01:01:24Z USER 10200 [neuronxcc.driver.CommandDriver]:   NeuronX Compiler version 2.0.99229.0a0+1897edc9
+2024-12-04T01:01:24Z USER 10200 [neuronxcc.driver.CommandDriver]:   
+2024-12-04T01:01:24Z USER 10200 [neuronxcc.driver.CommandDriver]:   Python version 3.10.12
+2024-12-04T01:01:24Z USER 10200 [neuronxcc.driver.CommandDriver]:   HWM version 2.0.0.99229+1897edc9
+2024-12-04T01:01:24Z USER 10200 [neuronxcc.driver.CommandDriver]:   NumPy version 1.25.2
+2024-12-04T01:01:24Z USER 10200 [neuronxcc.driver.CommandDriver]:   
+2024-12-04T01:01:24Z USER 10200 [neuronxcc.driver.CommandDriver]:   Running on AMI ami-0d9ef865dac90b730
+2024-12-04T01:01:24Z USER 10200 [neuronxcc.driver.CommandDriver]:   Running in region use2-az3
+2024-12-04T01:01:24Z USER 10200 [neuronxcc.driver.CommandDriver]: 
+2024-12-04T01:01:24Z USER 10200 [neuronxcc.driver.CommandDriver]: Diagnostic logs stored in /home/ubuntu/asst4-trainium/log-neuron-cc.txt
+2024-12-04T01:01:24Z INFO 10200 [neuronxcc.driver.CommandDriver]: Artifacts stored in: /home/ubuntu/asst4-trainium
+2024-12-04T01:01:24Z INFO 10192 [root]: Subcommand returned with exitcode=70

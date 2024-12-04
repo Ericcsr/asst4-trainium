@@ -95,7 +95,7 @@ def np_maxmax_pool_2D(in_tensor, pool_size):
 if __name__ == "__main__":
   # Now let's run the kernel
   POOL_SIZE = 2
-  C, HIN, WIN = 2, 1024, 1024
+  C, HIN, WIN = 2, 128, 128
   HOUT, WOUT = HIN//POOL_SIZE, WIN//POOL_SIZE
 
   in_tensor = np.arange(C * HIN * WIN, dtype=np.float16).reshape(C, HIN, WIN)
