@@ -85,12 +85,14 @@ def fused_conv2d_maxpool(X, W, bias, pool_size=1):
         # TODO: Perform the convolution of X[b] with the weights W and bias b, followed by a maxpool
         # and store the result in X_out[b]
         W_cache = nl.ndarray((n_tiles_c_out, nl.par_dim(c_out_per_tile), in_channels, filter_height, filter_width), dtype=W.dtype, buffer=nl.sbuf)
+        b_cache = nl.ndarray((n_tiles_c_out, nl.par_dim(c_out_per_tile),1,1), dtype=bias.dtype, buffer=nl.sbuf)
         for t_out_id in nl.affine_range(n_tiles_c_out):
-            for in_c_id in nl.affine_range(in_channels):
-                W_cache[t_out_id, :,in_c_id,:,:] = nl.load(W[t_out_id*c_out_per_tile:(t_out_id+1)*c_out_per_tile,in_c_id,:,:])
+            #for in_c_id in nl.affine_range(in_channels):
+            W_cache[t_out_id, :,:,:,:] = nl.load(W[t_out_id*c_out_per_tile:(t_out_id+1)*c_out_per_tile,:,:,:])
+            b_cache[t_out_id, :,:,:] = nl.load(bias[t_out_id*c_out_per_tile:(t_out_id+1)*c_out_per_tile])
+        
         for n in nl.affine_range(n_tiles_c_out):
-            bias_tile = nl.ndarray((c_out_per_tile,1,1), dtype=bias.dtype, buffer=nl.sbuf)
-            bias_tile[...] = nl.load(bias[n * c_out_per_tile:(n + 1) * c_out_per_tile])
+            bias_tile = nl.copy(b_cache[n], dtype=bias.dtype)
             broadcasted_bias = bias_tile.broadcast_to((c_out_per_tile, n_vert_pools, out_pool_width))
             for m in nl.affine_range(n_tiles_hw):
                 # preload X here
@@ -110,7 +112,7 @@ def fused_conv2d_maxpool(X, W, bias, pool_size=1):
                             # Should make X_tile preloaded as well
                             X_tile = nl.ndarray((c_in_per_tile, tile_height * out_width), dtype=X.dtype, buffer=nl.sbuf)
                             for h in nl.affine_range(tile_height):
-                                X_tile[:, h*out_width:(h+1)*out_width] = nl.copy(X_cache[k,:, h + i, j:j+out_width])
+                                X_tile[:, h*out_width:(h+1)*out_width] = nl.copy(X_cache[k,:, h + i, j:j+out_width], dtype=X.dtype)
                             partial_sum += nl.matmul(Wt_tile[...], X_tile[...], transpose_x=False)
                         conv_result[...] = nl.loop_reduce(partial_sum, op=np.add, loop_indices=[i,j], dtype=X_out.dtype) # directly transfer sbuf
 

@@ -167,6 +167,11 @@ if __name__ == "__main__":
         help="Use nki.simulate_kernel to run student implementation",
     )
     parser.add_argument(
+        "--only_performance",
+        action="store_true",
+        default=False
+    )
+    parser.add_argument(
         "--seed", type=int, default=42, help="Seed for random number generation"
     )
 
@@ -177,57 +182,58 @@ if __name__ == "__main__":
     if args.simulate:
         conv2d = simulate_kernel_wrapper(conv2d)
     # running correctness tests
-    print(
-        "Running correctness test for conv2d kernel with smaller images...",
-        end="",
-        flush=True,
-    )
-    test_result = test_correctness_conv2d_kernel(conv2d, use_larger_images=False)
-    if test_result:
-        print("Passed 😎")
-    else:
-        print("Failed 😢")
-
-    print(
-        "Running correctness test for conv2d kernel with larger images...",
-        end="",
-        flush=True,
-    )
-    test_result = test_correctness_conv2d_kernel(conv2d, use_larger_images=True)
-    if test_result:
-        print("Passed 😇")
-    else:
-        print("Failed 😢")
-
-    print(
-        "Running correctness test for conv2d kernel with larger images + bias...",
-        end="",
-        flush=True,
-    )
-    test_result = test_correctness_conv2d_kernel(
-        conv2d, use_bias=True, use_larger_images=True
-    )
-    if test_result:
-        print("Passed 😍")
-    else:
-        print("Failed 😢")
-
-    if args.test_maxpool:
+    if not args.only_performance:
         print(
-            "Running correctness test for conv2d kernel with larger images + bias + maxpool...",
+            "Running correctness test for conv2d kernel with smaller images...",
+            end="",
+            flush=True,
+        )
+        test_result = test_correctness_conv2d_kernel(conv2d, use_larger_images=False)
+        if test_result:
+            print("Passed 😎")
+        else:
+            print("Failed 😢")
+
+        print(
+            "Running correctness test for conv2d kernel with larger images...",
+            end="",
+            flush=True,
+        )
+        test_result = test_correctness_conv2d_kernel(conv2d, use_larger_images=True)
+        if test_result:
+            print("Passed 😇")
+        else:
+            print("Failed 😢")
+
+        print(
+            "Running correctness test for conv2d kernel with larger images + bias...",
             end="",
             flush=True,
         )
         test_result = test_correctness_conv2d_kernel(
-            conv2d, use_bias=True, use_maxpool=True, use_larger_images=True
+            conv2d, use_bias=True, use_larger_images=True
         )
         if test_result:
             print("Passed 😍")
         else:
             print("Failed 😢")
 
-    # if args.simulate:
-    #     exit()
+        if args.test_maxpool:
+            print(
+                "Running correctness test for conv2d kernel with larger images + bias + maxpool...",
+                end="",
+                flush=True,
+            )
+            test_result = test_correctness_conv2d_kernel(
+                conv2d, use_bias=True, use_maxpool=True, use_larger_images=True
+            )
+            if test_result:
+                print("Passed 😍")
+            else:
+                print("Failed 😢")
+
+    if args.simulate:
+        exit()
 
     print("Comparing performance with reference kernel (no maxpool, float32)...")
     test_result = test_performance_conv2d_kernel(conv2d, pool_size=1, dtype = np.float32)
